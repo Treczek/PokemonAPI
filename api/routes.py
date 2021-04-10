@@ -8,7 +8,7 @@ import logging
 
 from api import pokemon_api, pokemon_encounters_api
 from api.utils.exceptions import NonExistingPokemon
-from api.services import PokemonService
+from api.services import PokemonService, PokemonEncountersService
 
 pokemon_post_input = pokemon_api.model(
     'Post input', {
@@ -51,8 +51,9 @@ class PokemonEncountersRoutes(Resource):
     def post(self, id):
 
         logging.getLogger("PokemonAPI").info('Pokemon encounter has been posted')
-        # Inform the server about the encounter??
+
         # Request should have optional note and obligatory place.
+        json_data = request.get_json()
         # Timestamp is added during object creation
 
         print(id)
