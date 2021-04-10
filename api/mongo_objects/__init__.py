@@ -1,1 +1,1 @@
-from .pokemon import Pokemon, Sprite
+from .pokemon_schema import Pokemon, Sprite
