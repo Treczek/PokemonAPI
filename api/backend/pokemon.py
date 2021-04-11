@@ -4,13 +4,14 @@ Class which handles all operations within Pokemon queries
 import json
 import logging
 from datetime import datetime
-from typing import List
 
 import requests
+from flask import jsonify, Response
 from mongoengine.errors import FieldDoesNotExist
-from flask import jsonify
+
 from api.schemas import Pokemon, Sprite, Encounter
 from api.utils.exceptions import NonExistingPokemon, InvalidPayload
+from api.utils import replace_id_field_in_response
 
 
 class PokemonService:
@@ -23,12 +24,13 @@ class PokemonService:
         :return: Pokemon Object with given name
         """
 
-        pokemon = Pokemon.objects(name=pokemon_name).first()
+        pokemon = Pokemon.objects.exclude("encounters").filter(name=pokemon_name).first()
 
         if not pokemon:
             raise NonExistingPokemon
 
-        return pokemon
+        response = jsonify(pokemon)
+        return replace_id_field_in_response(response)
 
     @staticmethod
     def get_by_id(pokemon_id: int) -> Pokemon:
@@ -46,20 +48,31 @@ class PokemonService:
         return pokemon
 
     @staticmethod
-    def get_all_pokemons() -> List[Pokemon]:
-        return jsonify(Pokemon.objects.exclude('encounters'))
+    def get_all_pokemons() -> Response:
+        """
+        Return all Pokemons saved in the database in a required format.
+        :return: Response object containing list of all Pokemon documents saved in the database
+        """
+
+        list_of_all_pokemons = Pokemon.objects.exclude('encounters')
+        response = jsonify(list_of_all_pokemons)
+
+        return replace_id_field_in_response(response)
 
     @staticmethod
-    def get_all_encounters(pokemon_id: int) -> List[Encounter]:
+    def get_all_encounters(pokemon_id: int) -> Response:
+        """
+        Return all encounters for given pokemon id.
+        :return: Response object containing list of encounter jsons
+        """
         return jsonify(PokemonService.get_by_id(pokemon_id).encounters)
 
     @staticmethod
     def add_pokemon_from_external_api(pokemon_name_or_id: str) -> dict:
         """
         Fetching pokemon object from https://pokeapi.co/api/v2/pokemon/{pokemon_name} API.
-        If it doesn't exist raise NonExistingPokemon exception
+        If its exists -> save it to the datavase, if not, raise NonExistingPokemon error.
         :param pokemon_name_or_id: name of the pokemon that needs to be fetched
-        :return: dictionary with Pokemon information
         """
 
         url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name_or_id}/'
