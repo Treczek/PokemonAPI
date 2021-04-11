@@ -3,29 +3,26 @@ Main module for Flask application.
 """
 
 from flask import request
-from flask_restx import Resource, fields
+from flask_restx import Resource
 import logging
 
-from api import pokemon_api, pokemon_encounters_api
+from api import pokemon, pokemon_encounters
 from api.utils.exceptions import NonExistingPokemon
-from api.services import PokemonService, PokemonEncountersService
-
-pokemon_post_input = pokemon_api.model(
-    'Post input', {
-        'name': fields.String,
-    })
+from api.services import PokemonService
 
 
-@pokemon_api.route("/")
+@pokemon.route("/")
 class PokemonRoutes(Resource):
 
     def get(self):
         """
         Return a list of all pokemons in the database
         """
-        return PokemonService.get_all()
+        return PokemonService.get_all_pokemons()
 
-    @pokemon_api.expect(pokemon_post_input, validate=True)
+    @pokemon.doc(responses={200: 'Pokemon with posted name exists in the database and was returned to the client',
+                            201: 'Pokemon with posted name was created in the database.',
+                            404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self):
         """
         Return the pokemon from the database or fetch it from the external and save to the database.
@@ -33,28 +30,58 @@ class PokemonRoutes(Resource):
 
         json_data = request.get_json()
 
-        # TODO Handle wrong json file
         try:
             return PokemonService.get_by_name(json_data['name'])
         except NonExistingPokemon:
-            pokemon = PokemonService.fetch_from_pokeapi(json_data['name'])
-            PokemonService.save_pokemon(pokemon)
+
+            try:
+                pokemon_json = PokemonService.fetch_from_pokeapi(json_data['name'])
+            except NonExistingPokemon:
+                pokemon.abort(404)
+
+            PokemonService.save_pokemon(pokemon_json)
+            return None, 201
+
+    @pokemon.hide
+    def delete(self):
+        pokemon.abort(405)
+
+    @pokemon.hide
+    def put(self):
+        pokemon.abort(405)
+
+    @pokemon.hide
+    def patch(self):
+        pokemon.abort(405)
 
 
-@pokemon_encounters_api.route('/<id>/encounters')
+@pokemon_encounters.route('/<id>/encounters')
+@pokemon_encounters.doc(params={'id': 'Pokemon ID'})
 class PokemonEncountersRoutes(Resource):
 
     def get(self, id):
         # Return all encounters
-        return id
+        return PokemonService.get_all_encounters(pokemon_id=id)
 
+    @pokemon.doc(responses={201: 'Encounter was successfully attached to the Pokemon.',
+                            404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self, id):
-
+        # Informing the server about the encounter
         logging.getLogger("PokemonAPI").info('Pokemon encounter has been posted')
 
         # Request should have optional note and obligatory place.
-        json_data = request.get_json()
-        # Timestamp is added during object creation
+        encounter_data = request.get_json()
+        PokemonService.add_pokemon_encounter(pokemon_id=id, encounter=encounter_data)
+        return None, 201
 
-        print(id)
-        return id
+    @pokemon_encounters.hide
+    def delete(self):
+        pokemon_encounters.abort(405)
+
+    @pokemon_encounters.hide
+    def put(self):
+        pokemon_encounters.abort(405)
+
+    @pokemon_encounters.hide
+    def patch(self):
+        pokemon_encounters.abort(405)

@@ -1,2 +1,1 @@
 from .pokemon import PokemonService
-from .pokemon_encounters import PokemonEncountersService

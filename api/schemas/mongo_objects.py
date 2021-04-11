@@ -1,4 +1,5 @@
 from api import db
+from datetime import datetime
 
 
 class Sprite(db.EmbeddedDocument):
@@ -19,6 +20,17 @@ class Sprite(db.EmbeddedDocument):
         return {sprite: sprite_url for sprite, sprite_url in sprite_dict.items() if sprite in cls._fields}
 
 
+class Encounter(db.EmbeddedDocument):
+
+    pokemon_id = db.IntField(db_field='pokemon_id')
+    note = db.StringField()
+    place = db.StringField(required=True)
+
+    @property
+    def timestamp(self):
+        return int(datetime.timestamp(self.id.generation_time)) if self.id else None
+
+
 class Pokemon(db.Document):
     base_experience = db.IntField(required=True)
     height = db.IntField(required=True)
@@ -26,6 +38,7 @@ class Pokemon(db.Document):
     name = db.StringField(unique=True, required=True)
     sprites = db.EmbeddedDocumentField(Sprite)
     weight = db.IntField(required=True)
+    encounters = db.EmbeddedDocumentField(Encounter)
 
 
 """
