@@ -7,11 +7,11 @@ db = MongoEngine(app)
 
 api = Api(app, title='PokemonAPI', description='Wrapper for https://pokeapi.co/')
 
-pokemon_api = Namespace('Pokemon', description='Pokemon details', path='/api/pokemon/')
-api.add_namespace(pokemon_api)
+pokemon = Namespace('Pokemon', description='Pokemon details', path='/api/pokemon/')
+api.add_namespace(pokemon)
 
-pokemon_encounters_api = Namespace('Encounters', description='Pokemon encounters', path='/pokemon/')
-api.add_namespace(pokemon_encounters_api)
+pokemon_encounters = Namespace('Encounters', description='Pokemon encounters', path='/pokemon/')
+api.add_namespace(pokemon_encounters)
 
 
 
