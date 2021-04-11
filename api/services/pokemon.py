@@ -3,13 +3,14 @@ Class which handles all operations within Pokemon queries
 """
 import json
 import logging
+from datetime import datetime
 from typing import List
 
 import requests
+from mongoengine.errors import FieldDoesNotExist
 from flask import jsonify
-
 from api.schemas import Pokemon, Sprite, Encounter
-from api.utils.exceptions import NonExistingPokemon
+from api.utils.exceptions import NonExistingPokemon, InvalidPayload
 
 
 class PokemonService:
@@ -27,7 +28,7 @@ class PokemonService:
         if not pokemon:
             raise NonExistingPokemon
 
-        return jsonify(pokemon)
+        return pokemon
 
     @staticmethod
     def get_by_id(pokemon_id: int) -> Pokemon:
@@ -42,18 +43,18 @@ class PokemonService:
         if not pokemon:
             raise NonExistingPokemon
 
-        return jsonify(pokemon)
+        return pokemon
 
     @staticmethod
     def get_all_pokemons() -> List[Pokemon]:
-        return jsonify(Pokemon.objects())
+        return jsonify(Pokemon.objects.exclude('encounters'))
 
     @staticmethod
     def get_all_encounters(pokemon_id: int) -> List[Encounter]:
-        pass
+        return jsonify(PokemonService.get_by_id(pokemon_id).encounters)
 
     @staticmethod
-    def fetch_from_pokeapi(pokemon_name_or_id: str) -> dict:
+    def add_pokemon_from_external_api(pokemon_name_or_id: str) -> dict:
         """
         Fetching pokemon object from https://pokeapi.co/api/v2/pokemon/{pokemon_name} API.
         If it doesn't exist raise NonExistingPokemon exception
@@ -67,8 +68,7 @@ class PokemonService:
         if response.status_code == 404:
             raise NonExistingPokemon
 
-        # TODO handle api errors
-        return json.loads(response.content)
+        PokemonService.save_pokemon(pokemon=json.loads(response.content))
 
     @staticmethod
     def save_pokemon(pokemon: dict) -> Pokemon:
@@ -87,16 +87,27 @@ class PokemonService:
             sprites=Sprite.pick_specified_fields(pokemon['sprites'])
         ).save()
 
-        logging.getLogger('PokemonAPI').info(f"{pokemon['name']} saved to the database")
+        logging.getLogger('PokemonAPI').info(f"{pokemon['name']} created in the database")
 
     @staticmethod
-    def add_pokemon_encounter(pokemon_id: id, encounter: dict):
+    def add_pokemon_encounter(pokemon_id: id, encounter_json: dict):
         """
         Find Pokemon with given id and append an encounter to Pokemon.encounters field. Save afterwards.
         :param pokemon_id: id of encountered pokemon
-        :param encounter: json with encounter information. It has to be in line with EncounterJsonSchema
+        :param encounter_json: json with encounter information. It has to be in line with EncounterJsonSchema
         """
 
-        pokemon = PokemonService.get_by_id(pokemon_id)
+        try:
+            encounter = Encounter(**encounter_json)
+        except FieldDoesNotExist as exc:
+            raise InvalidPayload(exc.args[0])  # Passing detailed message about the payload error
+
+        try:
+            pokemon = PokemonService.get_by_id(pokemon_id)
+        except NonExistingPokemon:
+            PokemonService.add_pokemon_from_external_api(pokemon_id)
+            pokemon = PokemonService.get_by_id(pokemon_id)
+
+        encounter.timestamp = int(datetime.now().timestamp())
         pokemon.encounters.append(encounter)
         pokemon.save()
