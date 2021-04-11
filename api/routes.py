@@ -2,13 +2,14 @@
 Main module for Flask application.
 """
 
-from flask import request
-from flask_restx import Resource
 import logging
 
+from flask import request, jsonify
+from flask_restx import Resource
+
 from api import pokemon, pokemon_encounters
-from api.utils.exceptions import NonExistingPokemon
 from api.services import PokemonService
+from api.utils.exceptions import NonExistingPokemon
 
 
 @pokemon.route("/")
@@ -33,9 +34,8 @@ class PokemonRoutes(Resource):
         try:
             return PokemonService.get_by_name(json_data['name'])
         except NonExistingPokemon:
-
             try:
-                pokemon_json = PokemonService.fetch_from_pokeapi(json_data['name'])
+                pokemon_json = PokemonService.add_pokemon_from_external_api(json_data['name'])
             except NonExistingPokemon:
                 pokemon.abort(404)
 
@@ -70,8 +70,8 @@ class PokemonEncountersRoutes(Resource):
         logging.getLogger("PokemonAPI").info('Pokemon encounter has been posted')
 
         # Request should have optional note and obligatory place.
-        encounter_data = request.get_json()
-        PokemonService.add_pokemon_encounter(pokemon_id=id, encounter=encounter_data)
+        encounter_json = request.get_json()
+        PokemonService.add_pokemon_encounter(pokemon_id=id, encounter_json=encounter_json)
         return None, 201
 
     @pokemon_encounters.hide

@@ -1,8 +1,8 @@
 from api import db
-from datetime import datetime
 
 
 class Sprite(db.EmbeddedDocument):
+
     back_default = db.URLField(null=True)
     back_female = db.URLField(null=True)
     back_shiny = db.URLField(null=True)
@@ -22,13 +22,9 @@ class Sprite(db.EmbeddedDocument):
 
 class Encounter(db.EmbeddedDocument):
 
-    pokemon_id = db.IntField(db_field='pokemon_id')
     note = db.StringField()
     place = db.StringField(required=True)
-
-    @property
-    def timestamp(self):
-        return int(datetime.timestamp(self.id.generation_time)) if self.id else None
+    timestamp = db.IntField(required=True)
 
 
 class Pokemon(db.Document):
@@ -38,28 +34,4 @@ class Pokemon(db.Document):
     name = db.StringField(unique=True, required=True)
     sprites = db.EmbeddedDocumentField(Sprite)
     weight = db.IntField(required=True)
-    encounters = db.EmbeddedDocumentField(Encounter)
-
-
-"""
-Example Pokemon:
-
-{
-  "base_experience": 64,
-  "height": 7,
-  "id": 1,
-  "name": "bulbasaur",
-  "sprites": {
-    "back_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/1.png",
-    "back_female": null,
-    "back_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/1.png",
-    "back_shiny_female": null,
-    "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
-    "front_female": null,
-    "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/1.png",
-    "front_shiny_female": null
-  },
-  "weight": 69
-}
-
-"""
+    encounters = db.ListField(db.EmbeddedDocumentField(Encounter))
