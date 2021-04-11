@@ -4,84 +4,122 @@ Main module for Flask application.
 
 import logging
 
-from flask import request, jsonify
-from flask_restx import Resource
+from flask import request
+from flask_restx import Resource, fields
+from collections.abc import Mapping
 
-from api import pokemon, pokemon_encounters
-from api.services import PokemonService
-from api.utils.exceptions import NonExistingPokemon
+from api import pokemon_api, encounter_api
+from api.backend import PokemonService
+from api.utils.exceptions import NonExistingPokemon, InvalidPayload
 
 
-@pokemon.route("/")
-class PokemonRoutes(Resource):
+# Swagger payloads models for both pokemon and encounter post requests
+encounter_post_fields = encounter_api.model('EncounterPayload', {
+    'place': fields.String(required=True),
+    'note': fields.String()
+})
+
+pokemon_post_fields = pokemon_api.model('PokemonPayload', {
+    'name': fields.String(required=True)
+})
+
+
+@pokemon_api.route("/")
+class Pokemons(Resource):
 
     def get(self):
         """
-        Return a list of all pokemons in the database
+        Return a list of all pokemons in the database. If there is none Pokemons in the database, return empty list.
         """
         return PokemonService.get_all_pokemons()
 
-    @pokemon.doc(responses={200: 'Pokemon with posted name exists in the database and was returned to the client',
-                            201: 'Pokemon with posted name was created in the database.',
-                            404: 'Pokemon was not found. Confirm if its name exists.'})
+    @pokemon_api.expect(pokemon_post_fields)
+    @pokemon_api.doc(responses={200: 'Pokemon with posted name exists in the database and was returned to the client',
+                                201: 'Pokemon with posted name was created in the database.',
+                                404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self):
         """
         Return the pokemon from the database or fetch it from the external and save to the database.
         """
-
         json_data = request.get_json()
+
+        if not isinstance(json_data, Mapping):
+            encounter_api.abort(400, "Payload must be a JSON type.")
 
         try:
             return PokemonService.get_by_name(json_data['name'])
         except NonExistingPokemon:
             try:
-                pokemon_json = PokemonService.add_pokemon_from_external_api(json_data['name'])
+                PokemonService.add_pokemon_from_external_api(json_data['name'])
             except NonExistingPokemon:
-                pokemon.abort(404)
-
-            PokemonService.save_pokemon(pokemon_json)
+                pokemon_api.abort(404, f"{json_data['name']} was not found.")
             return None, 201
 
-    @pokemon.hide
+    @pokemon_api.hide
     def delete(self):
-        pokemon.abort(405)
+        pokemon_api.abort(405)
 
-    @pokemon.hide
+    @pokemon_api.hide
     def put(self):
-        pokemon.abort(405)
+        pokemon_api.abort(405)
 
-    @pokemon.hide
+    @pokemon_api.hide
     def patch(self):
-        pokemon.abort(405)
+        pokemon_api.abort(405)
 
 
-@pokemon_encounters.route('/<id>/encounters')
-@pokemon_encounters.doc(params={'id': 'Pokemon ID'})
-class PokemonEncountersRoutes(Resource):
+@encounter_api.route('/<id>/encounters')
+@encounter_api.doc(params={'id': 'Pokemon ID'})
+class Encounters(Resource):
 
+    @encounter_api.doc(responses={200: "Encounters successfully obtained.",
+                                  404: "Pokemon with given ID doesn't exist in the database"})
     def get(self, id):
-        # Return all encounters
-        return PokemonService.get_all_encounters(pokemon_id=id)
+        """
+        Return list of all encounters for given pokemon id.
+        """
 
-    @pokemon.doc(responses={201: 'Encounter was successfully attached to the Pokemon.',
-                            404: 'Pokemon was not found. Confirm if its name exists.'})
+        try:
+            encounters = PokemonService.get_all_encounters(pokemon_id=id)
+        except NonExistingPokemon:
+            encounter_api.abort(404)
+        else:
+            return encounters
+
+    @encounter_api.expect(encounter_post_fields)
+    @encounter_api.doc(responses={201: 'Encounter was successfully attached to the Pokemon.',
+                                  400: 'Payload has not met validation schema for Encounter object',
+                                  404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self, id):
-        # Informing the server about the encounter
-        logging.getLogger("PokemonAPI").info('Pokemon encounter has been posted')
-
-        # Request should have optional note and obligatory place.
+        """
+        Attach new encounter to the Pokemon with given id.
+        If pokemon doesn't exist in the database, it will be fetched from the external API.
+        """
         encounter_json = request.get_json()
-        PokemonService.add_pokemon_encounter(pokemon_id=id, encounter_json=encounter_json)
-        return None, 201
 
-    @pokemon_encounters.hide
+        if not isinstance(encounter_json, Mapping):
+            encounter_api.abort(400, "Payload must be a JSON type.")
+
+        # Informing the server about the encounter
+        logging.getLogger("PokemonAPI").info(f'Pokemon encounter has been posted to the server: {request.get_json()}')
+
+        try:
+            PokemonService.add_pokemon_encounter(pokemon_id=id, encounter_json=encounter_json)
+        except InvalidPayload as exc:
+            encounter_api.abort(400, message=exc.args[0])
+        except NonExistingPokemon:
+            encounter_api.abort(404)
+        else:
+            return None, 201
+
+    @encounter_api.hide
     def delete(self):
-        pokemon_encounters.abort(405)
+        encounter_api.abort(405)
 
-    @pokemon_encounters.hide
+    @encounter_api.hide
     def put(self):
-        pokemon_encounters.abort(405)
+        encounter_api.abort(405)
 
-    @pokemon_encounters.hide
+    @encounter_api.hide
     def patch(self):
-        pokemon_encounters.abort(405)
+        encounter_api.abort(405)
