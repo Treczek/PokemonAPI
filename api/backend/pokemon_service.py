@@ -1,15 +1,16 @@
 """
 Class which handles all operations within Pokemon queries
 """
+
 import json
 import logging
 from datetime import datetime
 from typing import List
 
 import requests
-from mongoengine.errors import FieldDoesNotExist
+from mongoengine.errors import FieldDoesNotExist, ValidationError
 
-from api.schemas import Pokemon, Sprite, Encounter
+from api.mongo import Pokemon, Sprite, Encounter
 from api.utils.exceptions import NonExistingPokemon, InvalidPayload
 
 
@@ -66,7 +67,7 @@ class PokemonService:
     def add_pokemon_from_external_api(pokemon_name_or_id: str) -> dict:
         """
         Fetching pokemon object from https://pokeapi.co/api/v2/pokemon/{pokemon_name} API.
-        If its exists -> save it to the datavase, if not, raise NonExistingPokemon error.
+        If its exists -> save it to the database, if not, raise NonExistingPokemon error.
         :param pokemon_name_or_id: name of the pokemon that needs to be fetched
         """
 
@@ -106,16 +107,17 @@ class PokemonService:
         """
 
         try:
-            encounter = Encounter(**encounter_json)
-        except FieldDoesNotExist as exc:
-            raise InvalidPayload(exc.args[0])  # Passing detailed message about the payload error
-
-        try:
             pokemon = PokemonService.get_by_id(pokemon_id)
         except NonExistingPokemon:
             PokemonService.add_pokemon_from_external_api(pokemon_id)
             pokemon = PokemonService.get_by_id(pokemon_id)
 
-        encounter.timestamp = int(datetime.now().timestamp())
-        pokemon.encounters.append(encounter)
-        pokemon.save()
+        try:
+            encounter = Encounter(**encounter_json)
+            encounter.timestamp = int(datetime.now().timestamp())
+            pokemon.encounters.append(encounter)
+            pokemon.save()
+        except (FieldDoesNotExist, ValidationError) as exc:
+            raise InvalidPayload(exc.args[0])  # Passing detailed message about the payload error
+
+

@@ -1,7 +1,43 @@
-from api import app
-from api.routes import Pokemons, Encounters  # This import is needed to attach routes to the app
+from flask import Flask
+from flask_mongoengine import MongoEngine
+from flask_restx import Api
+
+from api.encounter import encounter_api
+from api.pokemon import pokemon_api
 from api.utils import create_logger
+
+
+def create_app(debug=False, test=False, mongo_config=None):
+
+    create_logger('PokemonAPI')
+    app = Flask(__name__)
+
+    # Setting MongoDB instance
+
+    if mongo_config:
+        app.config['MONGODB_SETTINGS'] = mongo_config
+
+    app.config['TESTING'] = test
+    app.config['DEBUG'] = debug
+
+    MongoEngine(app)
+
+    api = Api(app,
+              title='PokemonAPI',
+              description='Wrapper for https://pokeapi.co/',
+              contact_email='tomek.reczek@gmail.com')
+
+    api.add_namespace(pokemon_api)
+    api.add_namespace(encounter_api)
+
+    return app
+
 
 if __name__ == '__main__':
     create_logger('PokemonAPI')
-    app.run(debug=True)
+    app = create_app(debug=True,
+                     mongo_config=dict(
+                               db='mongoengine',
+                               host='mongodb://localhost',
+                               alias='pokemon_api'))
+    app.run()
