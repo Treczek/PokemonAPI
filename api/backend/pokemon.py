@@ -4,14 +4,13 @@ Class which handles all operations within Pokemon queries
 import json
 import logging
 from datetime import datetime
+from typing import List
 
 import requests
-from flask import jsonify, Response
 from mongoengine.errors import FieldDoesNotExist
 
 from api.schemas import Pokemon, Sprite, Encounter
 from api.utils.exceptions import NonExistingPokemon, InvalidPayload
-from api.utils import replace_id_field_in_response
 
 
 class PokemonService:
@@ -29,8 +28,7 @@ class PokemonService:
         if not pokemon:
             raise NonExistingPokemon
 
-        response = jsonify(pokemon)
-        return replace_id_field_in_response(response)
+        return pokemon.to_mongo().to_dict()
 
     @staticmethod
     def get_by_id(pokemon_id: int) -> Pokemon:
@@ -48,24 +46,21 @@ class PokemonService:
         return pokemon
 
     @staticmethod
-    def get_all_pokemons() -> Response:
+    def get_all_pokemons() -> List[dict]:
         """
         Return all Pokemons saved in the database in a required format.
         :return: Response object containing list of all Pokemon documents saved in the database
         """
 
-        list_of_all_pokemons = Pokemon.objects.exclude('encounters')
-        response = jsonify(list_of_all_pokemons)
-
-        return replace_id_field_in_response(response)
+        return [pokemon.to_mongo().to_dict() for pokemon in Pokemon.objects()]
 
     @staticmethod
-    def get_all_encounters(pokemon_id: int) -> Response:
+    def get_all_encounters(pokemon_id: int) -> List[dict]:
         """
         Return all encounters for given pokemon id.
         :return: Response object containing list of encounter jsons
         """
-        return jsonify(PokemonService.get_by_id(pokemon_id).encounters)
+        return [encounter.to_mongo().to_dict() for encounter in PokemonService.get_by_id(pokemon_id).encounters]
 
     @staticmethod
     def add_pokemon_from_external_api(pokemon_name_or_id: str) -> dict:
