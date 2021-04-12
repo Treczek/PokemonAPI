@@ -1,1 +1,1 @@
-from .pokemon import PokemonService
+from .pokemon_service import PokemonService
