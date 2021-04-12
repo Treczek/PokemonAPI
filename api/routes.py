@@ -5,35 +5,28 @@ Main module for Flask application.
 import logging
 
 from flask import request
-from flask_restx import Resource, fields
+from flask_restx import Resource
 from collections.abc import Mapping
 
 from api import pokemon_api, encounter_api
 from api.backend import PokemonService
 from api.utils.exceptions import NonExistingPokemon, InvalidPayload
-
-
-# Swagger payloads models for both pokemon and encounter post requests
-encounter_post_fields = encounter_api.model('EncounterPayload', {
-    'place': fields.String(required=True),
-    'note': fields.String()
-})
-
-pokemon_post_fields = pokemon_api.model('PokemonPayload', {
-    'name': fields.String(required=True)
-})
+import api.schemas as schema
 
 
 @pokemon_api.route("/")
 class Pokemons(Resource):
 
+    @pokemon_api.marshal_with(schema.pokemons_get, as_list=True, code=200)
+    @pokemon_api.response(200, "All pokemons saved in the database successfully returned.")
     def get(self):
         """
         Return a list of all pokemons in the database. If there is none Pokemons in the database, return empty list.
         """
         return PokemonService.get_all_pokemons()
 
-    @pokemon_api.expect(pokemon_post_fields)
+    @pokemon_api.expect(schema.pokemons_post, validate=True)
+    @pokemon_api.marshal_with(schema.pokemons_get, code=200)
     @pokemon_api.doc(responses={200: 'Pokemon with posted name exists in the database and was returned to the client',
                                 201: 'Pokemon with posted name was created in the database.',
                                 404: 'Pokemon was not found. Confirm if its name exists.'})
@@ -52,7 +45,7 @@ class Pokemons(Resource):
             try:
                 PokemonService.add_pokemon_from_external_api(json_data['name'])
             except NonExistingPokemon:
-                pokemon_api.abort(404, f"{json_data['name']} was not found.")
+                pokemon_api.abort(404, f"{json_data['name']} was not found in the database and external API.")
             return None, 201
 
     @pokemon_api.hide
@@ -72,6 +65,7 @@ class Pokemons(Resource):
 @encounter_api.doc(params={'id': 'Pokemon ID'})
 class Encounters(Resource):
 
+    @encounter_api.marshal_with(schema.encounters_get, as_list=True)
     @encounter_api.doc(responses={200: "Encounters successfully obtained.",
                                   404: "Pokemon with given ID doesn't exist in the database"})
     def get(self, id):
@@ -86,7 +80,7 @@ class Encounters(Resource):
         else:
             return encounters
 
-    @encounter_api.expect(encounter_post_fields)
+    @encounter_api.expect(schema.encounters_post, validate=True)
     @encounter_api.doc(responses={201: 'Encounter was successfully attached to the Pokemon.',
                                   400: 'Payload has not met validation schema for Encounter object',
                                   404: 'Pokemon was not found. Confirm if its name exists.'})
@@ -108,7 +102,7 @@ class Encounters(Resource):
         except InvalidPayload as exc:
             encounter_api.abort(400, message=exc.args[0])
         except NonExistingPokemon:
-            encounter_api.abort(404)
+            encounter_api.abort(404, message="Pokemon was never encountered.")
         else:
             return None, 201
 
