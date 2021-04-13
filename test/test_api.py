@@ -11,9 +11,9 @@ def test_client():
 
     flask_app = create_app(test=True,
                            mongo_config=dict(
-                               db='mongoengine_mock',
-                               host='mongomock://localhost',
-                               alias='pokemon_api'
+                               MONGODB_DB='mongoengine_mock',
+                               MONGODB_HOST='mongomock://localhost',
+                               MONGODB_ALIAS='pokemon_api'
                            ))
 
     # Create a test client using the Flask application configured for testing
