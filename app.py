@@ -42,4 +42,3 @@ if __name__ == '__main__':
                                      f"@cluster0.eomnv.mongodb.net/PokemonAPI?retryWrites=true&w=majority",
                         MONGODB_ALIAS="pokemon_api",
                         MONGODB_DB='PokemonAPI'))
-    app.run()
