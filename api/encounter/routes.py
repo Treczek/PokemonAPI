@@ -18,7 +18,7 @@ model_encounter_get = encounter_api.model('EncounterGet', schema.encounter_get)
 @encounter_api.doc(params={'id': 'Pokemon ID'})
 class Encounters(Resource):
 
-    @encounter_api.marshal_with(model_encounter_get, as_list=True)
+    @encounter_api.marshal_with(model_encounter_get, as_list=True, skip_none=True)
     @encounter_api.response(200, model=model_encounter_get, description="Encounters successfully obtained.")
     @encounter_api.doc(responses={404: "Pokemon with given ID doesn't exist in the database"})
     def get(self, id):

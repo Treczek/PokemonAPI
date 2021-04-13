@@ -1,5 +1,3 @@
-import os
-
 from flask import Flask
 from flask_mongoengine import MongoEngine
 from flask_restx import Api
@@ -34,5 +32,6 @@ def create_app(logger=True, mongo_config=None):
 
 if __name__ == '__main__':
     create_logger('PokemonAPI')
-    app = create_app()
+    app = create_app(mongo_config=dict(MONGODB_ALIAS="pokemon_api",
+                                       MONGODB_DB='PokemonAPI'))
     app.run(debug=True)
