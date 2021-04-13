@@ -35,7 +35,7 @@ class Encounters(Resource):
 
     @encounter_api.expect(model_encounter_post, validate=True)
     @encounter_api.doc(responses={201: 'Encounter was successfully attached to the Pokemon.',
-                                  400: 'Payload has not met validation schema for Encounter object',
+                                  400: 'Payload has not met validation schema of Encounter object',
                                   404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self, id):
         """
