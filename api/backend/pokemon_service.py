@@ -1,5 +1,5 @@
 """
-Class which handles all operations within Pokemon queries
+Class which handles all operations within PokemonAPI queries
 """
 
 import json

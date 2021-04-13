@@ -1,11 +1,13 @@
-from flask import request
-from flask_restx import Resource, Namespace
 from collections.abc import Mapping
-from api.backend import PokemonService
+
+from flask import request
+from flask_restx import Resource, Namespace, marshal
+
 import api.pokemon.json_schema as schema
+from api.backend import PokemonService
 from api.utils.exceptions import NonExistingPokemon
 
-pokemon_api = Namespace('Pokemons', description='Pokemon details', path='/api/pokemon/', validate=True)
+pokemon_api = Namespace('Pokemons', description='Pokemon details', path='/api/pokemon', validate=True)
 
 model_pokemon_post = pokemon_api.model('PokemonsPost', schema.pokemon_post)
 model_pokemon_sprites = pokemon_api.model('Sprites', schema.pokemon_sprites)
@@ -25,10 +27,8 @@ class Pokemons(Resource):
         return PokemonService.get_all_pokemons()
 
     @pokemon_api.expect(model_pokemon_post, validate=True)
-    @pokemon_api.marshal_with(model_pokemon_get, code=200)
-    @pokemon_api.response(200, model=model_pokemon_get, description='Pokemon with posted name exists in the database'
-                                                                    'and was returned to the client')
-    @pokemon_api.doc(responses={201: 'Pokemon with posted name was created in the database.',
+    @pokemon_api.doc(responses={200: 'Pokemon with posted name exists in the database and was returned to the client',
+                                201: 'Pokemon with posted name was created in the database.',
                                 404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self):
         """
@@ -40,7 +40,7 @@ class Pokemons(Resource):
             pokemon_api.abort(400, "Payload must be a JSON type.")
 
         try:
-            return PokemonService.get_by_name(json_data['name'])
+            return marshal(PokemonService.get_by_name(json_data['name']), model_pokemon_get), 200
         except NonExistingPokemon:
             try:
                 PokemonService.add_pokemon_from_external_api(json_data['name'])

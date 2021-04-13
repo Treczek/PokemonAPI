@@ -8,7 +8,7 @@ import api.encounter.json_schema as schema
 from api.backend import PokemonService
 from api.utils.exceptions import NonExistingPokemon, InvalidPayload
 
-encounter_api = Namespace('Encounters', description='Pokemon encounters', path='/api/pokemon/', validate=True)
+encounter_api = Namespace('Encounters', description='Pokemon encounters', path='/pokemon', validate=True)
 
 model_encounter_post = encounter_api.model('EncounterPost', schema.encounter_post)
 model_encounter_get = encounter_api.model('EncounterGet', schema.encounter_get)
@@ -42,6 +42,7 @@ class Encounters(Resource):
         Attach new encounter to the Pokemon with given id.
         If pokemon doesn't exist in the database, it will be fetched from the external API.
         """
+
         encounter_json = request.get_json()
 
         if not isinstance(encounter_json, Mapping):
@@ -60,13 +61,13 @@ class Encounters(Resource):
             return None, 201
 
     @encounter_api.hide
-    def delete(self):
+    def delete(self, id):
         encounter_api.abort(405)
 
     @encounter_api.hide
-    def put(self):
+    def put(self, id):
         encounter_api.abort(405)
 
     @encounter_api.hide
-    def patch(self):
+    def patch(self, id):
         encounter_api.abort(405)
