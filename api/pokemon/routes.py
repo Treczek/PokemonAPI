@@ -10,7 +10,6 @@ from api.utils.exceptions import NonExistingPokemon
 pokemon_api = Namespace('Pokemons', description='Pokemon details', path='/api/pokemon', validate=True)
 
 model_pokemon_post = pokemon_api.model('PokemonsPost', schema.pokemon_post)
-model_pokemon_sprites = pokemon_api.model('Sprites', schema.pokemon_sprites)
 model_pokemon_get = pokemon_api.model('PokemonsGet', schema.pokemon_get)
 
 
@@ -32,7 +31,7 @@ class Pokemons(Resource):
                                 404: 'Pokemon was not found. Confirm if its name exists.'})
     def post(self):
         """
-        Return the pokemon from the database or fetch it from the external and save to the database.
+        Return the pokemon from the database or fetch it from the external api and save to the database.
         """
         json_data = request.get_json()
 
