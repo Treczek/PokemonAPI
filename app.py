@@ -7,13 +7,14 @@ from api.pokemon import pokemon_api
 from api.utils import create_logger
 
 
-def create_app(debug=False, test=False, mongo_config=None):
+def create_app(debug=False, test=False, logger=True, mongo_config=None):
 
-    create_logger('PokemonAPI')
+    if logger:
+        create_logger('PokemonAPI')
+
     app = Flask(__name__)
 
     # Setting MongoDB instance
-
     if mongo_config:
         app.config['MONGODB_SETTINGS'] = mongo_config
 

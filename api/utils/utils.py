@@ -18,7 +18,9 @@ def create_logger(name):
         logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     )
 
-    logger.addHandler(stream_handler)
+    # Avoid duplication of handlers if method run more then once during runtime
+    if not logger.handlers:
+        logger.addHandler(stream_handler)
 
     # Block the propagation of logging messages to root logger
     logger.propagate = False

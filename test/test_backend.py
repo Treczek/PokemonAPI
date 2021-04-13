@@ -1,16 +1,15 @@
-import mongoengine
 import pytest
-from mongoengine import connect, disconnect
+from mongoengine import connect
 
 from api.backend import PokemonService
-from api.mongo import Pokemon, Encounter
+from api.mongo import Pokemon
 from api.utils.exceptions import NonExistingPokemon, InvalidPayload
 
 
 def stabbed_external_api_call(name_or_id):
 
     if name_or_id not in ['ekans', 23]:
-        raise AttributeError('During tests of non existing pokemons you must use ekans or id 23')
+        raise NonExistingPokemon
 
     PokemonService.save_pokemon(
         {
