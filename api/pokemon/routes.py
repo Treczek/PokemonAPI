@@ -10,6 +10,7 @@ from api.utils.exceptions import NonExistingPokemon
 pokemon_api = Namespace('Pokemons', description='Pokemon details', path='/api/pokemon', validate=True)
 
 model_pokemon_post = pokemon_api.model('PokemonsPost', schema.pokemon_post)
+model_pokemon_sprites = pokemon_api.model('Sprites', schema.pokemon_sprites)
 model_pokemon_get = pokemon_api.model('PokemonsGet', schema.pokemon_get)
 
 
