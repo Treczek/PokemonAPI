@@ -9,8 +9,7 @@ from app import create_app
 @pytest.fixture
 def test_client():
 
-    flask_app = create_app(test=True,
-                           mongo_config=dict(
+    flask_app = create_app(mongo_config=dict(
                                MONGODB_DB='mongoengine_mock',
                                MONGODB_HOST='mongomock://localhost',
                                MONGODB_ALIAS='pokemon_api'
